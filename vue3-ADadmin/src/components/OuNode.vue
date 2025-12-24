@@ -16,7 +16,7 @@
             </div>
 
             <div class="cell badge">
-                <span v-if="node.parentou === 1" class="chip">有子層</span>
+                <span v-if="hasChildren" class="chip">有子層</span>
                 <span v-else class="chip muted">無子層</span>
             </div>
         </div>
@@ -27,9 +27,14 @@
     </li>
 </template>
 
+<script lang="ts">
+export default {
+    name: 'OuNode'
+}
+</script>
+
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import OuNode from './OuNode.vue'
 
 const props = defineProps<{
     node: any

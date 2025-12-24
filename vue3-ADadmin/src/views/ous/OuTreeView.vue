@@ -32,10 +32,10 @@
         </Transition>
 
         <!-- 建立 OU -->
-        <CreateOuModal v-if="showCreate" :dc-dn="dcDn" :ou-options="ous" :ous="ous" @close="showCreate = false"
+        <CreateOuModal v-if="showCreate" :dc-dn="dcDn" :ou-options="ouOptions" :ous="ouOptions" @close="showCreate = false"
             @submit="submitCreate" />
         <!-- 修改 / 刪除 OU -->
-        <EditOuModal v-if="showEdit && editingOu" :ou="editingOu" :ou-options="ous" :ous="ous" @close="closeEdit"
+        <EditOuModal v-if="showEdit && editingOuForModal" :ou="editingOuForModal" :ou-options="ouOptions" :ous="ouOptions" @close="closeEdit"
             @submit="submitEdit" @delete="openDeleteConfirm" />
         <!-- 刪除防呆 -->
         <ConfirmDelete v-if="showDeleteConfirm" @cancel="showDeleteConfirm = false" @confirm="confirmDelete" />
@@ -50,6 +50,7 @@ import {
     createOu,
     updateOu,
     deleteOu,
+    type Ou,
 } from '@/services/adadmin'
 
 import OuNode from '../../components/OuNode.vue'
@@ -57,15 +58,7 @@ import CreateOuModal from '../../components/CreateOuModal.vue'
 import EditOuModal from '../../components/EditOuModal.vue'
 import ConfirmDelete from '../../components/ConfirmDeleteOu.vue'
 
-type OuItem = {
-    id: number
-    ou_dn: string
-    ouname: string
-    description: string
-    parent_dn: string | null
-    parent_id: number | null
-    parentou: number
-}
+type OuItem = Ou
 
 const adSettingsStore = useAdSettingsStore()
 
@@ -86,6 +79,18 @@ const loadOus = async () => {
     const list = await fetchOus()
     ous.value = list
 }
+
+/* ---------- 轉換為 OuOption（確保 id 為 number） ---------- */
+const ouOptions = computed(() => 
+    ous.value
+        .filter((o): o is OuItem & { id: NonNullable<OuItem['id']> } => o.id !== undefined && o.id !== null)
+        .map(o => ({
+            ...o,
+            id: typeof o.id === 'string' ? parseInt(o.id, 10) : (o.id as number),
+            parent_id: o.parent_id ? (typeof o.parent_id === 'string' ? parseInt(o.parent_id, 10) : o.parent_id) : null,
+            parentou: o.parentou ?? 0
+        }))
+)
 
 onMounted(async () => {
     await adSettingsStore.init()
@@ -136,11 +141,29 @@ const openCreateModal = () => {
 }
 
 const submitCreate = async (payload: {
-    parentOuName: string
-    childOuName?: string
+    ouname: string
     description: string
+    parent_dn?: string | null
+    parent_id?: number | null
+    parentou?: number
 }) => {
-    await createOu(payload)
+    // 轉換新格式為後端期望的舊格式
+    const apiPayload: any = {
+        parentOuName: payload.ouname,
+        description: payload.description
+    }
+
+    // 如果是子層 OU（parentou = 1），需要找到父層 OU 的名稱
+    if (payload.parentou === 1 && payload.parent_dn) {
+        const parentOu = ous.value.find(o => o.ou_dn === payload.parent_dn)
+        if (parentOu) {
+            // 後端格式：parentOuName 是父層名稱，childOuName 是當前 OU 名稱
+            apiPayload.parentOuName = parentOu.ouname
+            apiPayload.childOuName = payload.ouname
+        }
+    }
+
+    await createOu(apiPayload)
     showCreate.value = false
     successMessage.value = '已成功新增組織單位'
     setTimeout(() => {
@@ -159,6 +182,17 @@ const closeEdit = () => {
     editingOu.value = null
     showEdit.value = false
 }
+
+// 轉換 editingOu 為 EditOuModal 所需的類型
+const editingOuForModal = computed(() => {
+    if (!editingOu.value) return null
+    return {
+        ...editingOu.value,
+        id: typeof editingOu.value.id === 'string' ? parseInt(editingOu.value.id, 10) : (editingOu.value.id as number),
+        parent_id: editingOu.value.parent_id ? (typeof editingOu.value.parent_id === 'string' ? parseInt(editingOu.value.parent_id, 10) : editingOu.value.parent_id) : null,
+        parentou: editingOu.value.parentou ?? 0
+    }
+})
 
 const submitEdit = async (data: any) => {
     if (!editingOu.value) return
@@ -194,8 +228,7 @@ const submitEdit = async (data: any) => {
         updatePayload.parentou = data.parentou
     }
 
-    console.log('updatePayload:', updatePayload)
-    await updateOu(editingOu.value.id, updatePayload)
+    await updateOu(editingOu.value.id!, updatePayload)
     closeEdit()
     successMessage.value = '已成功更新組織單位'
     setTimeout(() => {
@@ -211,7 +244,7 @@ const openDeleteConfirm = () => {
 
 const confirmDelete = async () => {
     if (!editingOu.value) return
-    await deleteOu(editingOu.value.id)
+    await deleteOu(editingOu.value.id!)
     showDeleteConfirm.value = false
     closeEdit()
     await loadOus()

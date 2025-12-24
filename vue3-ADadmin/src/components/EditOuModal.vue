@@ -107,6 +107,12 @@ const ouHierarchy = ref<'root' | 'child'>('root') // radio 選擇：root 或 chi
 const selectedParentOu = ref<number | ''>('')
 const errorMessage = ref('')
 
+// 根據 parent_dn 查找父 OU 的 ID
+const getParentOuIdByDn = (parentDn: string): number | '' => {
+  const parent = (props.ouOptions || []).find(o => o.ou_dn === parentDn)
+  return parent ? parent.id : ''
+}
+
 watch(
   () => props.ou,
   (v) => {
@@ -119,12 +125,6 @@ watch(
   },
   { immediate: true }
 )
-
-// 根據 parent_dn 查找父 OU 的 ID
-const getParentOuIdByDn = (parentDn: string): number | '' => {
-  const parent = (props.ouOptions || []).find(o => o.ou_dn === parentDn)
-  return parent ? parent.id : ''
-}
 
 // 動態計算 ou_dn：根據 hierarchy 選擇和父 OU 自動更新
 const computedOuDn = computed(() => {

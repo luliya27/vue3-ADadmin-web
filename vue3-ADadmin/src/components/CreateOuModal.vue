@@ -11,62 +11,56 @@
         <div v-if="errorMessage" class="error-message">
           ⚠️ {{ errorMessage }}
         </div>
-        <!-- 第一列：父 OU / OU 別名 -->
+        <!-- 第一列：OU 名稱 / 別名（部門） -->
         <div class="row">
           <div class="field">
             <label>OU 名稱：</label>
-            <!-- 父 OU 名稱（手動輸入） -->
-            <input v-model.trim="parentOuName" class="input" placeholder="例如：HeadOffice" />
-
-            <!-- 父 OU dropdown（來源：ous root） -->
-            <!-- <select v-model="parentOuName" class="input">
-              <option value="">請選擇父 OU</option>
-              <option v-for="ou in rootOuOptions"
-                :key="ou.id"
-                :value="ou.ouname">
-                {{ ou.ouname }}
-              </option>
-            </select> -->
+            <input v-model.trim="ouname" class="input" placeholder="例如：HeadOffice" />
           </div>
-
           <div class="field">
-            <label>OU別名（部門）：</label>
+            <label>別名（部門）：</label>
             <input v-model.trim="description" class="input" placeholder="例如：資訊部" />
           </div>
         </div>
 
-        <!-- 第二列：建立子層 / 子 OU dropdown -->
+        <!-- 第二列：OU 層級選擇（Radio） -->
         <div class="row">
-          <div class="field checkbox">
-            <label>建立子層 OU：</label>
-            <input type="checkbox" v-model="enableChild" />
-          </div>
-
-          <div class="field" v-if="enableChild">
-            <label>選擇子 OU 名稱：</label>
-
-            <!-- 子 OU dropdown（來源：ous root） -->
-            <select v-model="childOuName" class="input">
-              <option value="">請選擇子 OU</option>
-              <option v-for="ou in childOuOptions" :key="ou.id" :value="ou.ouname">
-                {{ ou.ouname }}
-              </option>
-            </select>
-
-            <div class="help">
-              子 OU 名稱讀取來源於資料表 ous 既有項目（root OU）
+          <div class="field">
+            <label>OU 層級：</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" v-model="ouHierarchy" value="root" />
+                <span>無子層 OU</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" v-model="ouHierarchy" value="child" />
+                <span>設為子層 OU</span>
+              </label>
             </div>
           </div>
         </div>
 
-        <!-- 第三列：OU_DN 預覽（readonly） -->
+        <!-- 第二點五列：選擇父 OU（當選擇設為子層時顯示） -->
+        <div class="row" v-if="ouHierarchy === 'child'">
+          <div class="field">
+            <label>選擇父層 OU：</label>
+            <select v-model="selectedParentOu" class="input">
+              <option value="">請選擇父層 OU</option>
+              <option v-for="ou in parentOuOptions" :key="ou.id" :value="ou.id">
+                {{ ou.ouname }}
+              </option>
+            </select>
+            <div class="help">
+              選擇此 OU 的父層 OU
+            </div>
+          </div>
+        </div>
+
+        <!-- 第三列：OU_DN（readonly） -->
         <div class="row">
           <div class="field full">
-            <label>OU_DN（自動產生）：</label>
-            <input :value="ouDnPreview" class="input dark" readonly />
-            <div v-if="!dcDn" class="warn">
-              尚未設定 DC DN（請先到「系統設定」儲存網域）
-            </div>
+            <label>OU_DN：</label>
+            <input :value="computedOuDn" class="input dark" readonly />
           </div>
         </div>
       </div>
@@ -103,92 +97,107 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'submit', payload: { parentOuName: string; childOuName?: string; description: string }): void
+  (e: 'submit', payload: { ouname: string; description: string; parent_dn?: string | null; parent_id?: number | null; parentou?: number }): void
 }>()
 
-const parentOuName = ref('')
-const childOuName = ref('')
+const ouname = ref('')
 const description = ref('')
-const enableChild = ref(false)
+const ouHierarchy = ref<'root' | 'child'>('root') // radio 選擇：root 或 child
+const selectedParentOu = ref<number | ''>('')
 const errorMessage = ref('')
 
 const dcDn = computed(() => (props.dcDn || '').trim())
 
-// 只取「root OU」（parent_dn 為 NULL 或 parentou 可視你資料而定）
-// ✅ 你目前 DB root 是 parent_dn = NULL，這個最準
+// 只取「root OU」（parent_dn 為 NULL）
 const rootOuOptions = computed(() =>
   (props.ouOptions || []).filter(o => !o.parent_dn)
 )
 
-// 子 OU dropdown：同樣來源於 root OU
-// ✅ 也避免子 OU 跟父 OU 同名（可選）
-const childOuOptions = computed(() =>
-  rootOuOptions.value.filter(o => o.ouname !== parentOuName.value)
-)
+// 可作為父 OU 的選項：所有 root OU
+const parentOuOptions = computed(() => rootOuOptions.value)
 
-// 若取消勾選子層 OU，就清掉子 OU 選擇
-watch(enableChild, (v) => {
-  if (!v) childOuName.value = ''
+// 若切換回「無子層 OU」，清空父層選擇
+watch(ouHierarchy, (v) => {
+  if (v === 'root') {
+    selectedParentOu.value = ''
+  }
 })
 
-// OU_DN 預覽（完全依照你需求規則）
-const ouDnPreview = computed(() => {
+// 動態計算 ou_dn：根據 hierarchy 選擇和父 OU 自動更新
+const computedOuDn = computed(() => {
+  const ouDisplayName = ouname.value.trim()
+  if (!ouDisplayName) return ''
   if (!dcDn.value) return ''
 
-  const parent = parentOuName.value.trim()
-  const child = childOuName.value.trim()
-
-  if (!parent) return ''
-
-  // 無子層：OU=HeadOffice,DC=corp,DC=example,DC=com
-  if (!enableChild.value) {
-    return `OU=${parent},${dcDn.value}`
+  // 如果選擇無子層 OU（root OU）
+  if (ouHierarchy.value === 'root') {
+    return `OU=${ouDisplayName},${dcDn.value}`
   }
 
-  // 有子層：OU=IT,OU=HeadOffice,DC=corp,DC=example,DC=com
-  if (!child) return ''
-  return `OU=${child},OU=${parent},${dcDn.value}`
+  // 如果選擇設為子層 OU，根據選中的父 OU 的 ou_dn 計算
+  if (ouHierarchy.value === 'child') {
+    if (selectedParentOu.value) {
+      const parentOu = (props.ouOptions || []).find(o => o.id === selectedParentOu.value)
+      if (parentOu) {
+        // 使用父 OU 的完整 ou_dn：OU=childName,<parent_ou_dn>
+        return `OU=${ouDisplayName},${parentOu.ou_dn}`
+      }
+    }
+    // 如果還未選擇父 OU，暫時顯示預設格式
+    return `OU=${ouDisplayName},${dcDn.value}`
+  }
+
+  return `OU=${ouDisplayName},${dcDn.value}`
 })
 
 const canSubmit = computed(() => {
   if (!dcDn.value) return false
-  if (!parentOuName.value.trim()) return false
-  if (enableChild.value && !childOuName.value.trim()) return false
+  if (!ouname.value.trim()) return false
+  if (ouHierarchy.value === 'child' && !selectedParentOu.value) return false
   return true
 })
 
 const submit = () => {
   errorMessage.value = ''
-  const parentName = parentOuName.value.trim()
-  const childName = childOuName.value.trim()
+  const name = ouname.value.trim()
 
   if (!dcDn.value) return
-  if (!parentName) return
-  if (enableChild.value && !childName) return
-
-  // 檢查父 OU 名稱是否重複
-  if (props.ous) {
-    const parentDuplicate = props.ous.some(o => o.ouname === parentName)
-    if (parentDuplicate) {
-      errorMessage.value = '建立失敗（可能 OU 名稱已存在）'
-      return
-    }
+  if (!name) return
+  if (ouHierarchy.value === 'child' && !selectedParentOu.value) {
+    errorMessage.value = '選擇設為子層 OU 時，必須選擇父層 OU'
+    return
   }
 
-  // 檢查子 OU 名稱是否重複（如果有子 OU）
-  if (enableChild.value && childName && props.ous) {
-    const childDuplicate = props.ous.some(o => o.ouname === childName)
-    if (childDuplicate) {
-      errorMessage.value = '建立失敗（可能 OU 名稱已存在）'
+  // 檢查 OU 名稱是否重複
+  if (props.ous) {
+    const duplicate = props.ous.some(o => o.ouname === name)
+    if (duplicate) {
+      errorMessage.value = '建立失敗（OU 名稱已存在）'
       return
     }
   }
 
   const payload: any = {
-    parentOuName: parentName,
+    ouname: name,
     description: description.value.trim(),
   }
-  if (enableChild.value) payload.childOuName = childName
+
+  // 根據 hierarchy 設定 parent_dn、parent_id、parentou
+  if (ouHierarchy.value === 'root') {
+    // 無子層 OU（Root OU）：parent_dn = null, parent_id = null, parentou = 0
+    payload.parent_dn = null
+    payload.parent_id = null
+    payload.parentou = 0
+  } else if (ouHierarchy.value === 'child' && selectedParentOu.value) {
+    // 設為子層 OU：設定 parent_dn、parent_id、parentou
+    const parentOu = (props.ouOptions || []).find(o => o.id === selectedParentOu.value)
+    if (parentOu) {
+      payload.parent_dn = parentOu.ou_dn
+      payload.parent_id = parentOu.id
+      payload.parentou = 1
+    }
+  }
+
   emit('submit', payload)
 }
 </script>
@@ -205,7 +214,7 @@ const submit = () => {
 }
 
 .modal-card {
-  width: min(980px, 100%);
+  width: min(860px, 100%);
   background: rgba(15, 23, 42, 0.96);
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 18px;
@@ -221,7 +230,7 @@ const submit = () => {
 }
 
 .title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #e5e7eb;
 }
@@ -250,7 +259,7 @@ const submit = () => {
 }
 
 .field {
-  flex: 1 1 420px;
+  flex: 1 1 360px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -264,11 +273,37 @@ const submit = () => {
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  flex: 0 0 240px;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.radio-option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #a855f7;
+}
+
+.radio-option span {
+  user-select: none;
 }
 
 label {
-  font-size: 14px;
+  font-size: 13px;
   color: rgba(226, 232, 240, 0.9);
 }
 
@@ -277,9 +312,8 @@ label {
   border: 1px solid rgba(148, 163, 184, 0.55);
   background: rgba(15, 23, 42, 0.85);
   color: #e5e7eb;
-  font-size: 14px;
-  padding: 9px 14px;
-  outline: none;
+  font-size: 13px;
+  padding: 8px 12px;
 }
 
 .input.dark {
@@ -287,15 +321,9 @@ label {
 }
 
 .help {
-  margin-top: 2px;
+  margin-top: 6px;
   font-size: 12px;
-  color: rgba(148, 163, 184, 0.95);
-}
-
-.warn {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #fca5a5;
+  color: #9ca3af;
 }
 
 .error-message {
@@ -320,14 +348,14 @@ label {
 }
 
 .btn {
-  height: 38px;
-  padding: 0 18px;
+  height: 36px;
+  padding: 0 16px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(2, 6, 23, 0.5);
   color: #e5e7eb;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .btn.primary {
