@@ -99,14 +99,14 @@
             @close="showCreate = false" @submit="submitCreate" />
         <EditUserModal v-if="showEdit && editingUser" :user="editingUser" :ous="ous" :groups="groups" :users="users"
             @close="closeEdit" @submit="submitEdit" @delete="requestDelete" @unlock="doUnlock" />
-        <ConfirmDeleteUser v-if="showDeleteConfirm" @cancel="showDeleteConfirm = false" @confirm="confirmDelete" />
+        <ConfirmDeleteUser  :visible="showDeleteConfirm" :user="editingUser" @cancel="showDeleteConfirm = false" @confirm="confirmDelete" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-    UserStatus,
+    type UserStatus,
     fetchUsers,
     createUser,
     updateUser,
@@ -141,8 +141,21 @@ const editingUser = ref<User | null>(null)
 // 統一載入資料
 const loadAll = async () => {
     users.value = await fetchUsers()
-    ous.value = await fetchOus()
-    groups.value = await fetchGroups()
+    const ouList = await fetchOus()
+    // 轉換 OU 數據，確保 id 為 number 類型且 description 為 string
+    ous.value = ouList
+        .filter((o): o is typeof o & { id: number } => o.id !== undefined && o.id !== null)
+        .map(o => ({
+            ...o,
+            id: typeof o.id === 'string' ? parseInt(o.id, 10) : o.id,
+            description: o.description || ''
+        }))
+    const groupList = await fetchGroups()
+    // 轉換 Group 數據，確保 description 為 string 類型
+    groups.value = groupList.map(g => ({
+        ...g,
+        description: g.description || ''
+    }))
 }
 
 onMounted(loadAll)

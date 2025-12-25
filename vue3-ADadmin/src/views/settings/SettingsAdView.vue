@@ -144,6 +144,8 @@ const onUpload = async (field: 'syslogo' | 'sysbackgroundimg') => {
         if (!input.files?.length) return
 
         const file = input.files[0]
+        if (!file) return // TypeScript 類型守衛
+        
         uploading.value = true
         message.value = ''
 

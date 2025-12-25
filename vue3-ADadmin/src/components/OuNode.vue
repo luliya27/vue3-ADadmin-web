@@ -67,6 +67,11 @@ const hasChildren = computed(() => Array.isArray(props.node.children) && props.n
     background: rgba(15, 23, 42, 0.7);
 }
 
+.row:hover {
+    border-color: rgba(168, 85, 247, 0.6);
+    background: rgba(15, 23, 42, 0.85);
+}
+
 .children {
     margin: 10px 0 0 22px;
     padding: 0;
@@ -136,6 +141,7 @@ const hasChildren = computed(() => Array.isArray(props.node.children) && props.n
 
 .desc:hover {
     border-color: rgba(168, 85, 247, 0.7);
+    cursor: pointer;
 }
 
 .badge {

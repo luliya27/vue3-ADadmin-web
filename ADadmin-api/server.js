@@ -574,23 +574,8 @@ app.patch('/api/ous/:id', (req, res) => {
       let newParentou = parentou !== undefined ? parentou : ou.parentou
       let newParentId = null
 
-      // 如果有指定 parent_dn，查找對應的 parent_id
-      if (newParentDn) {
-        db.get(
-          `SELECT id FROM ous WHERE ou_dn = ?`,
-          [newParentDn],
-          (pErr, parent) => {
-            if (!pErr && parent) {
-              newParentId = parent.id
-            }
-            performUpdate()
-          }
-        )
-      } else {
-        performUpdate()
-      }
-
-      const performUpdate = () => {
+      // ✅ 定義 performUpdate 函數（必須在調用之前定義）
+      function performUpdate() {
         // 如果前端傳來 ou_dn，使用前端的值；否則計算
         if (ou_dn) {
           newOuDn = ou_dn
@@ -626,50 +611,135 @@ app.patch('/api/ous/:id', (req, res) => {
             return res.status(500).json({ success: false, message: '更新失敗（可能 DN 重複）' })
           }
 
-          // 若原本的父 OU 變更了，需要更新舊父 OU 的 parentou 狀態
-          if (ou.parent_dn && ou.parent_dn !== newParentDn) {
-            // 檢查舊父 OU 是否還有其他子層
-            db.get(
-              `SELECT COUNT(*) as cnt FROM ous WHERE parent_dn = ? AND id != ?`,
-              [ou.parent_dn, id],
-              (cErr, cRes) => {
-                if (!cErr && cRes?.cnt === 0) {
-                  // 舊父 OU 沒有子層了，將其 parentou 改回 0
+          // ✅ 遞迴更新所有子孫 OU 的 ou_dn 和 parent_dn
+          // oldOuDn: 更新前的 OU DN（用於查找子 OU）
+          // newOuDn: 更新後的 OU DN（用於生成子 OU 的新 DN）
+          const updateDescendants = (oldOuDn, newOuDn, callback) => {
+            db.all(
+              `SELECT id, ouname, ou_dn FROM ous WHERE parent_dn = ?`,
+              [oldOuDn],
+              (cErr, children) => {
+                if (cErr) {
+                  console.error('查詢子 OU 失敗：', cErr)
+                  return callback(cErr)
+                }
+                
+                if (!children || children.length === 0) {
+                  return callback(null)
+                }
+
+                let completed = 0
+                const total = children.length
+
+                children.forEach(child => {
+                  const childOldOuDn = child.ou_dn
+                  const childNewOuDn = `OU=${child.ouname},${newOuDn}`
+                  
                   db.run(
-                    `UPDATE ous SET parentou = 0 WHERE ou_dn = ?`,
-                    [ou.parent_dn],
+                    `UPDATE ous SET ou_dn = ?, parent_dn = ? WHERE id = ?`,
+                    [childNewOuDn, newOuDn, child.id],
                     (uErr) => {
-                      if (uErr) console.error('更新舊父 OU parentou 失敗：', uErr)
+                      if (uErr) {
+                        console.error('更新子 OU 失敗：', uErr)
+                        completed++
+                        if (completed === total) {
+                          callback(null)
+                        }
+                      } else {
+                        // 遞迴更新此子 OU 的後代（用舊DN查找，用新DN生成）
+                        updateDescendants(childOldOuDn, childNewOuDn, (descErr) => {
+                          if (descErr) {
+                            console.error('遞迴更新子孫 OU 失敗：', descErr)
+                          }
+                          completed++
+                          if (completed === total) {
+                            callback(null)
+                          }
+                        })
+                      }
                     }
                   )
+                })
+              }
+            )
+          }
+
+          // 如果 OU_DN 有變化，遞迴更新所有子孫
+          if (ou.ou_dn !== newOuDn) {
+            updateDescendants(ou.ou_dn, newOuDn, (descErr) => {
+              if (descErr) {
+                console.error('更新子孫 OU 失敗：', descErr)
+              }
+              
+              // 繼續處理父 OU 的 parentou 狀態更新
+              handleParentOuUpdates()
+            })
+          } else {
+            handleParentOuUpdates()
+          }
+
+          function handleParentOuUpdates() {
+            // 若原本的父 OU 變更了，需要更新舊父 OU 的 parentou 狀態
+            if (ou.parent_dn && ou.parent_dn !== newParentDn) {
+              // 檢查舊父 OU 是否還有其他子層
+              db.get(
+                `SELECT COUNT(*) as cnt FROM ous WHERE parent_dn = ? AND id != ?`,
+                [ou.parent_dn, id],
+                (cErr, cRes) => {
+                  if (!cErr && cRes?.cnt === 0) {
+                    // 舊父 OU 沒有子層了，將其 parentou 改回 0
+                    db.run(
+                      `UPDATE ous SET parentou = 0 WHERE ou_dn = ?`,
+                      [ou.parent_dn],
+                      (uErr) => {
+                        if (uErr) console.error('更新舊父 OU parentou 失敗：', uErr)
+                      }
+                    )
+                  }
                 }
-              }
-            )
-          }
+              )
+            }
 
-          // 若新增了父層關係，確保新父 OU 的 parentou = 1
-          if (newParentDn && (!ou.parent_dn || ou.parent_dn !== newParentDn)) {
-            db.run(
-              `UPDATE ous SET parentou = 1 WHERE ou_dn = ?`,
-              [newParentDn],
-              (pErr) => {
-                if (pErr) console.error('更新新父 OU parentou 失敗：', pErr)
-              }
-            )
-          }
+            // 若新增了父層關係，確保新父 OU 的 parentou = 1
+            if (newParentDn && (!ou.parent_dn || ou.parent_dn !== newParentDn)) {
+              db.run(
+                `UPDATE ous SET parentou = 1 WHERE ou_dn = ?`,
+                [newParentDn],
+                (pErr) => {
+                  if (pErr) console.error('更新新父 OU parentou 失敗：', pErr)
+                }
+              )
+            }
 
-          res.json({ 
-            success: true, 
-            data: { 
-              id, 
-              ouname: newOuname, 
-              ou_dn: newOuDn, 
-              parent_dn: newParentDn,
-              parent_id: newParentId,
-              parentou: newParentou 
-            } 
-          })
+            res.json({ 
+              success: true, 
+              data: { 
+                id, 
+                ouname: newOuname, 
+                ou_dn: newOuDn, 
+                parent_dn: newParentDn,
+                parent_id: newParentId,
+                parentou: newParentou 
+              } 
+            })
+          }
         })
+      }
+
+      // 查找 parent_id（如果有 parent_dn），然後調用 performUpdate
+      if (newParentDn) {
+        db.get(
+          `SELECT id FROM ous WHERE ou_dn = ?`,
+          [newParentDn],
+          (pErr, parent) => {
+            if (!pErr && parent) {
+              newParentId = parent.id
+            }
+            performUpdate()
+          }
+        )
+      } else {
+        performUpdate()
       }
     })
   })

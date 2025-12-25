@@ -38,7 +38,7 @@
         <EditOuModal v-if="showEdit && editingOuForModal" :ou="editingOuForModal" :ou-options="ouOptions" :ous="ouOptions" @close="closeEdit"
             @submit="submitEdit" @delete="openDeleteConfirm" />
         <!-- 刪除防呆 -->
-        <ConfirmDelete v-if="showDeleteConfirm" @cancel="showDeleteConfirm = false" @confirm="confirmDelete" />
+        <ConfirmDelete :visible="showDeleteConfirm" :ou="editingOu" @cancel="showDeleteConfirm = false" @confirm="confirmDelete" />
     </div>
 </template>
 

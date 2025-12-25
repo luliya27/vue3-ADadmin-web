@@ -118,9 +118,10 @@ watch(
   (v) => {
     ouname.value = v?.ouname || ''
     description.value = v?.description || ''
-    // 根據 parentou 設定初始 hierarchy
-    ouHierarchy.value = v?.parentou === 1 ? 'child' : 'root'
-    selectedParentOu.value = v?.parentou === 1 ? (v?.parent_dn ? getParentOuIdByDn(v.parent_dn) : '') : ''
+    // ✅ 根據 parent_dn 判斷是否為 child（而非 parentou）
+    // parent_dn 為 null = root OU，不為 null = child OU
+    ouHierarchy.value = v?.parent_dn ? 'child' : 'root'
+    selectedParentOu.value = v?.parent_dn ? getParentOuIdByDn(v.parent_dn) : ''
     errorMessage.value = ''
   },
   { immediate: true }
@@ -196,23 +197,21 @@ const submit = () => {
     description: newDescription,
   }
 
-  // 根據 hierarchy 設定 ou_dn、parent_dn、parent_id、parentou
+  // ⚠️ 注意：不要修改 parentou，後端會自動更新
   if (ouHierarchy.value === 'root') {
-    // 無子層 OU（Root OU）：parent_dn = null, parent_id = null, parentou = 0
+    // 無子層 OU（Root OU）：parent_dn = null, parent_id = null
     payload.ou_dn = computedOuDn.value
     // 若原本是 child，改回 root
-    if (props.ou.parentou === 1) {
+    if (props.ou.parent_dn) {
       payload.parent_dn = null
       payload.parent_id = null
-      payload.parentou = 0
     }
   } else if (ouHierarchy.value === 'child' && selectedParentOu.value) {
-    // 設為子層 OU：設定 parent_dn、parent_id、parentou、ou_dn
+    // 設為子層 OU：設定 parent_dn、parent_id、ou_dn
     const parentOu = (props.ouOptions || []).find(o => o.id === selectedParentOu.value)
     if (parentOu) {
       payload.parent_dn = parentOu.ou_dn
       payload.parent_id = parentOu.id
-      payload.parentou = 1
       payload.ou_dn = computedOuDn.value
     }
   }

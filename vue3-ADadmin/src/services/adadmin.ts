@@ -267,7 +267,7 @@ export async function deleteOu(id: string | number): Promise<void> {
 }
 /* ---------- 電腦管理 ---------- */
 // 電腦資料結構
-export type ComputerItem = {
+export type Computer = {
   id: number
   cpname: string
   os: string
@@ -286,7 +286,7 @@ export async function fetchComputers(params?: {
   domain?: string
   conn?: string
   acc?: string
-}): Promise<ComputerItem[]> {
+}): Promise<Computer[]> {
   const cleaned: Record<string, string> = {}
 
   if (params?.q?.trim()) cleaned.q = params.q.trim()
@@ -300,12 +300,12 @@ export async function fetchComputers(params?: {
 
 
 // 建立電腦
-export async function createComputer(payload: Partial<ComputerItem>) {
+export async function createComputer(payload: Partial<Computer>) {
   return http.post('/api/computers', payload)
 }
 
 // 更新電腦
-export async function updateComputer(id: number, payload: Partial<ComputerItem>) {
+export async function updateComputer(id: number, payload: Partial<Computer>) {
   return http.patch(`/api/computers/${id}`, payload)
 }
 

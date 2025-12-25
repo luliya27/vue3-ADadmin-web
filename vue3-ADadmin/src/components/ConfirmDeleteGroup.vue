@@ -1,11 +1,11 @@
 <template>
     <div v-if="visible" class="mask" @click.self="$emit('cancel')">
-        <div class="box">
+        <div class="confirm-box">
             <div class="icon">!</div>
             <div class="title">確定將群組刪除？</div>
             <div class="sub" v-if="group?.groupname">群組：{{ group.groupname }}</div>
 
-            <div class="footer">
+            <div class="footer-actions">
                 <button class="btn ok" @click="$emit('cancel')">取消</button>
                 <button class="btn danger" @click="$emit('confirm')">刪除</button>
             </div>
@@ -15,7 +15,6 @@
 
 <script setup lang="ts">
 import type { Group } from '@/services/adadmin'
-
 defineProps<{ visible: boolean; group: Group | null }>()
 defineEmits<{ (e: 'cancel'): void; (e: 'confirm'): void }>()
 </script>
@@ -32,8 +31,8 @@ defineEmits<{ (e: 'cancel'): void; (e: 'confirm'): void }>()
     z-index: 100;
 }
 
-.box {
-    width: min(720px, 100%);
+.confirm-box {
+    width: min(500px, 100%);
     border-radius: 16px;
     border: 1px solid rgba(148, 163, 184, .3);
     background: rgba(15, 23, 42, .96);
@@ -68,7 +67,7 @@ defineEmits<{ (e: 'cancel'): void; (e: 'confirm'): void }>()
     margin-bottom: 14px;
 }
 
-.footer {
+.footer-actions {
     display: flex;
     justify-content: center;
     gap: 14px;

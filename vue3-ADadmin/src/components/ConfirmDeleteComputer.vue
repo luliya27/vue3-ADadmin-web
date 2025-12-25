@@ -1,10 +1,11 @@
 <template>
-    <div class="mask" @click.self="$emit('cancel')">
-        <div class="confirm">
+    <div v-if="visible" class="mask" @click.self="$emit('cancel')">
+        <div class="confirm-box">
             <div class="icon">!</div>
-            <div class="text">確定將電腦資訊刪除？</div>
+            <div class="title">確定將電腦資訊刪除？</div>
+            <div class="sub" v-if="computer?.cpname">電腦名稱：{{ computer.cpname }}</div>
 
-            <div class="actions">
+            <div class="footer-actions">
                 <button class="btn ok" @click="$emit('cancel')">取消</button>
                 <button class="btn danger" @click="$emit('confirm')">刪除</button>
             </div>
@@ -13,57 +14,67 @@
 </template>
 
 <script setup lang="ts">
-defineEmits<{
-    (e: 'cancel'): void
-    (e: 'confirm'): void
-}>()
+import type { Computer } from '@/services/adadmin'
+defineProps<{ visible: boolean; computer: Computer | null }>()
+defineEmits<{ (e: 'cancel'): void; (e: 'confirm'): void }>()
 </script>
 
 <style scoped>
 .mask {
     position: fixed;
     inset: 0;
-    background: rgba(2, 6, 23, 0.62);
+    background: rgba(2, 6, 23, .62);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 16px;
-    z-index: 60;
+    z-index: 100;
 }
 
-.confirm {
-    width: min(420px, 100%);
-    background: rgba(15, 23, 42, 0.96);
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    border-radius: 18px;
-    padding: 18px 18px 16px;
+.confirm-box {
+    width: min(500px, 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, .3);
+    background: rgba(15, 23, 42, .96);
+    padding: 26px 22px 18px;
     text-align: center;
 }
 
 .icon {
-    width: 46px;
-    height: 46px;
+    width: 68px;
+    height: 68px;
+    margin: 0 auto 14px;
     border-radius: 999px;
-    margin: 0 auto 10px;
-    display: grid;
-    place-items: center;
-    font-weight: 900;
-    font-size: 22px;
+    background: rgba(239, 68, 68, .8);
     color: #fff;
-    background: rgba(239, 68, 68, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    font-weight: 800;
 }
 
-.text {
+.title {
+    font-size: 22px;
+    font-weight: 800;
     color: #e5e7eb;
-    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.sub {
+    font-size: 13px;
+    color: #9ca3af;
     margin-bottom: 14px;
 }
 
-.actions {
+.footer-actions {
     display: flex;
     justify-content: center;
-    gap: 12px;
+    gap: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(148, 163, 184, .2);
 }
+
 
 .btn {
     height: 36px;

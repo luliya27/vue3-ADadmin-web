@@ -63,7 +63,7 @@
                         <td><span class="chip" :class="'domain-' + c.DomainMembershipStatus">{{
                             domainText(c.DomainMembershipStatus) }}</span></td>
                         <td><span class="chip" :class="'conn-' + c.ConnectivityStatus">{{ connText(c.ConnectivityStatus)
-                        }}</span></td>
+                                }}</span></td>
                         <td><span class="chip" :class="'acc-' + c.ComputerAccount_inADStatus">{{
                             accText(c.ComputerAccount_inADStatus) }}</span></td>
                     </tr>
@@ -99,28 +99,31 @@
                 ✓ {{ successMessage }}
             </div>
         </Transition>
-        <!-- 新增 / 修改 / 刪除防呆 -->
-        <CreateComputerModal v-if="showCreate" :ou-options="ouOptions" :computers="computers"
-            @close="showCreate = false" @submit="submitCreate" />
-        <EditComputerModal v-if="showEdit && editing" :computer="editing" :ou-options="ouOptions" :computers="computers"
-            @close="closeEdit" @submit="submitEdit" @delete="openDeleteConfirm" />
-        <ConfirmDelete v-if="showDelete" @cancel="showDelete = false" @confirm="confirmDelete" />
     </div>
+
+    <!-- 新增 / 修改 / 刪除防呆 -->
+    <CreateComputerModal v-if="showCreate" :ou-options="ouOptions" :computers="computers" @close="showCreate = false"
+        @submit="submitCreate" />
+    <EditComputerModal v-if="showEdit && editing" :computer="editing" :ou-options="ouOptions" :computers="computers"
+        @close="closeEdit" @submit="submitEdit" @delete="openDeleteConfirm" />
+    <ConfirmDelete :visible="showDelete" :computer="editing" v-if="showDelete" @cancel="showDelete = false"
+        @confirm="confirmDelete" />
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, Transition } from 'vue'
-import { fetchComputers, createComputer, updateComputer, deleteComputer } from '@/services/adadmin'
-import { fetchOus } from '@/services/adadmin'
-
+import { fetchComputers, createComputer, updateComputer, deleteComputer, fetchOus } from '@/services/adadmin'
 import CreateComputerModal from '../../components/CreateComputerModal.vue'
 import EditComputerModal from '../../components/EditComputerModal.vue'
 import ConfirmDelete from '../../components/ConfirmDeleteComputer.vue'
 
 type OuItem = { id: number; ouname: string }
-type ComputerItem = any
+type Computer = any
 
-const computers = ref<ComputerItem[]>([])
+// =====================
+// 資料狀態管理
+// =====================
+const computers = ref<Computer[]>([])
 const ouOptions = ref<OuItem[]>([])
 const successMessage = ref('')
 
@@ -129,11 +132,30 @@ const domainFilter = ref('')
 const connFilter = ref('')
 const accFilter = ref('')
 
-const showCreate = ref(false)
-const showEdit = ref(false)
-const showDelete = ref(false)
-const editing = ref<ComputerItem | null>(null)
+// =====================
+// Chip 文案轉換
+// =====================
+const domainText = (v: string) => ({ 
+    Joined: '已加入網域', 
+    LeftDomain: '已離開網域', 
+    NotJoined: '未加入網域' 
+}[v] || v)
 
+const connText = (v: string) => ({ 
+    Online: '線上', 
+    Offline: '離線', 
+    LockedOut: '鎖定' 
+}[v] || v)
+
+const accText = (v: string) => ({ 
+    Enabled: '啟用中', 
+    Disabled: '停用中', 
+    Unused: '已建立但未啟用' 
+}[v] || v)
+
+// =====================
+// 載入電腦清單
+// =====================
 const load = async () => {
     computers.value = await fetchComputers({
         q: keyword.value,
@@ -143,34 +165,21 @@ const load = async () => {
     })
 }
 
-// 分頁效果
+// =====================
+// 分頁功能
+// =====================
 const PAGE_SIZE = 12
 const page = ref(1)
 
-// 你的列表來源：假設你目前是 computers.value (API 回來的全部)
-// 如果你已經有 computed filteredComputers，就把下面的 source 改成 filteredComputers.value
-const sourceList = computed(() => computers.value) // ← 這行改成你的來源
-// const sourceList = computed(() => filteredComputers.value)
-
+const sourceList = computed(() => computers.value)
 const total = computed(() => sourceList.value.length)
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
-
 const showPagination = computed(() => total.value > PAGE_SIZE)
 
 // 目前頁面的資料
 const pagedList = computed(() => {
     const start = (page.value - 1) * PAGE_SIZE
     return sourceList.value.slice(start, start + PAGE_SIZE)
-})
-
-// ✅ 當搜尋/篩選結果改變時，自動回到第一頁
-watch([() => sourceList.value.length], () => {
-    page.value = 1
-})
-
-// ✅ 防呆：當資料變少導致頁碼超過，拉回最後一頁
-watch([totalPages], () => {
-    if (page.value > totalPages.value) page.value = totalPages.value
 })
 
 // UI 用：顯示頁碼（最多 7 顆，含 ...）
@@ -205,23 +214,41 @@ const goPrev = () => { if (page.value > 1) page.value-- }
 const goNext = () => { if (page.value < totalPages.value) page.value++ }
 const goPage = (p: number) => { page.value = p }
 
-// 載入 OU 選項
+// ✅ 當搜尋/篩選結果改變時，自動回到第一頁
+watch([() => sourceList.value.length], () => {
+    page.value = 1
+})
+
+// ✅ 防呆：當資料變少導致頁碼超過，拉回最後一頁
+watch([totalPages], () => {
+    if (page.value > totalPages.value) page.value = totalPages.value
+})
+
+// =====================
+// 初始化載入
+// =====================
 onMounted(async () => {
     const ous = await fetchOus()
     ouOptions.value = ous.map((o: any) => ({ id: o.id, ouname: o.ouname }))
     await load()
 })
 
-// 即時搜尋（簡單 debounce）
-let t: any = null
+// =====================
+// 搜尋與篩選監聽
+// =====================
+let debounceTimer: any = null
 watch([keyword, domainFilter, connFilter, accFilter], () => {
-    clearTimeout(t)
-    t = setTimeout(load, 250)
+    clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(load, 250)
 })
 
-const openCreate = () => (showCreate.value = true)
-const openEdit = (c: ComputerItem) => { editing.value = c; showEdit.value = true }
-const closeEdit = () => { editing.value = null; showEdit.value = false }
+// =====================
+// Create Modal
+// =====================
+const showCreate = ref(false)
+const openCreate = () => {
+    showCreate.value = true
+}
 
 const submitCreate = async (payload: any) => {
     await createComputer(payload)
@@ -233,18 +260,40 @@ const submitCreate = async (payload: any) => {
     await load()
 }
 
+// =====================
+// Edit Modal
+// =====================
+const showEdit = ref(false)
+const editing = ref<Computer | null>(null)
+const openEdit = (c: Computer) => {
+    editing.value = c
+    showEdit.value = true
+}
+
+const closeEdit = () => {
+    editing.value = null
+    showEdit.value = false
+}
+
 const submitEdit = async (payload: any) => {
     if (!editing.value) return
     await updateComputer(editing.value.id, payload)
     closeEdit()
-    successMessage.value = '已成功更新群組'
+    successMessage.value = '已成功更新電腦'
     setTimeout(() => {
         successMessage.value = ''
     }, 3000)
     await load()
 }
 
-const openDeleteConfirm = () => { showDelete.value = true }
+// =====================
+// Delete Confirm
+// =====================
+const showDelete = ref(false)
+const openDeleteConfirm = () => {
+    showDelete.value = true
+}
+
 const confirmDelete = async () => {
     if (!editing.value) return
     await deleteComputer(editing.value.id)
@@ -252,11 +301,6 @@ const confirmDelete = async () => {
     closeEdit()
     await load()
 }
-
-// chip 文案
-const domainText = (v: string) => ({ Joined: '已加入網域', LeftDomain: '已離開網域', NotJoined: '未加入網域' }[v] || v)
-const connText = (v: string) => ({ Online: '線上', Offline: '離線', LockedOut: '鎖定' }[v] || v)
-const accText = (v: string) => ({ Enabled: '啟用中', Disabled: '停用中', Unused: '已建立但未啟用' }[v] || v)
 </script>
 
 <style scoped>
