@@ -85,17 +85,6 @@ export async function unlockUser(id: number): Promise<void> {
   await http.patch(`/api/users/${id}/unlock`)
 }
 
-// // 下拉選單資料
-// export async function fetchOus(): Promise<OuItem[]> {
-//   const res = await http.get('/api/ous')
-//   return res.data.data
-// }
-
-// export async function fetchGroups(): Promise<GroupItem[]> {
-//   const res = await http.get('/api/groups')
-//   return res.data.data
-// }
-
 /* ---------- 使用者管理 ---------- */
 // 使用者資料結構: active, locked, disabled
 export type UserStatus = 'active' | 'locked' | 'disabled'
