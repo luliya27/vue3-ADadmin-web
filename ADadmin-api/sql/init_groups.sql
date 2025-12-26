@@ -1,6 +1,16 @@
 -- 重新建立 groups 資料表
 -- 群組資料表（新版）
 DROP TABLE IF EXISTS groups;
+
+-- 資料表groups
+-- ├─ 群組名稱：groupname
+-- ├─ 群組描述：description
+-- ├─ 安全性群組：security
+-- │    ├─ 全域群組：security-global
+-- │    ├─ 網域群組：security-domainlocal
+-- │    └─ 萬用群組：security-universal
+-- └─ 通訊群組：distribution
+
 -- grouptype 限定為：
 --  security-global / security-domainlocal / security-universal / distribution
 CREATE TABLE IF NOT EXISTS groups (
