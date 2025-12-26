@@ -76,7 +76,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import Multiselect from 'vue-multiselect' // 引入 Multiselect 元件
-import 'vue-multiselect/dist/vue-multiselect.css'
+import 'vue-multiselect/dist/vue-multiselect.css' // 引入 Multiselect 樣式
 const props = defineProps<{
     ous: OuItem[]
     groups: GroupItem[]

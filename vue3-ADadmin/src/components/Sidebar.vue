@@ -272,7 +272,7 @@ const goTo = (name: string) => {
 }
 
 .menu-item:hover {
-    background: rgba(148, 163, 184, 0.15);
+    background: rgba(15, 23, 42, 0.95);
 }
 
 .menu-item.active {

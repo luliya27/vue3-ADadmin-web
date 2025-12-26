@@ -15,8 +15,8 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: LoginView,
-    meta: { public: true }, // 不需要登入即可進入
+    component: LoginView, // 登入頁面
+    meta: { public: true }, // 公開頁面
   },
   // 需要登入後才能進入的區域
   {

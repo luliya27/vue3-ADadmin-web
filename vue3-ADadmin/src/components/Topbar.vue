@@ -48,7 +48,7 @@ const logout = () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(15, 23, 42, 0.98);
+    background: #020617;
     position: sticky;
     top: 0;
     z-index: 10;
