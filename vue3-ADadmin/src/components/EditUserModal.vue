@@ -130,9 +130,9 @@ watch(() => props.user, (u) => {
     form.value.passwordHash = ''
 
     // 設定選中的部門（OU）
-    // 先嘗試用 ou（DN） 比對，若無則用 ouname 比對
-    if (u.ou) {
-        selectedDept.value = props.ous.find(o => o.ou_dn === u.ou) || null
+    // 先嘗試用 ou_dn（DN） 比對，若無則用 ouname 比對
+    if (u.ou_dn) {
+        selectedDept.value = props.ous.find(o => o.ou_dn === u.ou_dn) || null
     } else if (u.ouname) {
         selectedDept.value = props.ous.find(o => o.ouname === u.ouname) || null
     } else {
@@ -196,7 +196,7 @@ const submit = () => {
     background: rgba(15, 23, 42, .96);
     border: 1px solid rgba(148, 163, 184, .3);
     border-radius: 18px;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 .modal-header {
@@ -367,8 +367,13 @@ label {
 .multiselect-input :deep(.multiselect__content-wrapper) {
     border-color: rgba(148, 163, 184, .55);
     background: rgba(15, 23, 42, .96);
-    max-height: 200px;
 }
+
+.multiselect__content-wrapper {
+    max-height: 500px;
+    z-index: 1000;
+}
+
 
 .multiselect-input :deep(.multiselect__option) {
     color: #ffffff !important;

@@ -30,7 +30,7 @@
             <div class="radio-group">
               <label class="radio-option">
                 <input type="radio" v-model="ouHierarchy" value="root" />
-                <span>無子層 OU</span>
+                <span>本身 OU</span>
               </label>
               <label class="radio-option">
                 <input type="radio" v-model="ouHierarchy" value="child" />
@@ -116,7 +116,7 @@ const rootOuOptions = computed(() =>
 // 可作為父 OU 的選項：所有 root OU
 const parentOuOptions = computed(() => rootOuOptions.value)
 
-// 若切換回「無子層 OU」，清空父層選擇
+// 若切換回「設為本身 OU」，清空父層選擇
 watch(ouHierarchy, (v) => {
   if (v === 'root') {
     selectedParentOu.value = ''
@@ -129,7 +129,7 @@ const computedOuDn = computed(() => {
   if (!ouDisplayName) return ''
   if (!dcDn.value) return ''
 
-  // 如果選擇無子層 OU（root OU）
+  // 如果選擇設為本身 OU（root OU）
   if (ouHierarchy.value === 'root') {
     return `OU=${ouDisplayName},${dcDn.value}`
   }
@@ -184,7 +184,7 @@ const submit = () => {
 
   // 根據 hierarchy 設定 parent_dn、parent_id、parentou
   if (ouHierarchy.value === 'root') {
-    // 無子層 OU（Root OU）：parent_dn = null, parent_id = null, parentou = 0
+    // 設為本身 OU（Root OU）：parent_dn = null, parent_id = null, parentou = 0
     payload.parent_dn = null
     payload.parent_id = null
     payload.parentou = 0

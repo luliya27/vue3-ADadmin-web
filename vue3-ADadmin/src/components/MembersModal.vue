@@ -37,12 +37,13 @@
                             <td class="mono">{{ u.username }}</td>
                             <td>{{ u.display_name }}</td>
                             <td class="mono">{{ u.email }}</td>
+                            <td>{{ u.department || '-' }}</td>
                             <td class="mono">
                                 <div>{{ u.ouname || '未指定' }}</div>
                             </td>
                             <td>
-                                <div v-if="u.ou_dn || u.ou" class="ou-dn">
-                                    {{ u.ou_dn || u.ou }}
+                                <div v-if="u.ou_dn" class="ou-dn">
+                                    {{ u.ou_dn }}
                                 </div>
                             </td>
                             <td>
@@ -129,7 +130,8 @@ watch(
     background: #020617;
     border-radius: 12px;
     border: 1px solid rgba(148, 163, 184, 0.6);
-    width: 900px;
+    /* width: 900px; */
+    min-width: 800px;
     max-height: 80vh;
     display: flex;
     flex-direction: column;

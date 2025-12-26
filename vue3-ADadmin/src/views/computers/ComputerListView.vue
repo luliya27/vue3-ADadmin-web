@@ -63,7 +63,7 @@
                         <td><span class="chip" :class="'domain-' + c.DomainMembershipStatus">{{
                             domainText(c.DomainMembershipStatus) }}</span></td>
                         <td><span class="chip" :class="'conn-' + c.ConnectivityStatus">{{ connText(c.ConnectivityStatus)
-                                }}</span></td>
+                        }}</span></td>
                         <td><span class="chip" :class="'acc-' + c.ComputerAccount_inADStatus">{{
                             accText(c.ComputerAccount_inADStatus) }}</span></td>
                     </tr>
@@ -135,22 +135,22 @@ const accFilter = ref('')
 // =====================
 // Chip 文案轉換
 // =====================
-const domainText = (v: string) => ({ 
-    Joined: '已加入網域', 
-    LeftDomain: '已離開網域', 
-    NotJoined: '未加入網域' 
+const domainText = (v: string) => ({
+    Joined: '已加入網域',
+    LeftDomain: '已離開網域',
+    NotJoined: '未加入網域'
 }[v] || v)
 
-const connText = (v: string) => ({ 
-    Online: '線上', 
-    Offline: '離線', 
-    LockedOut: '鎖定' 
+const connText = (v: string) => ({
+    Online: '線上',
+    Offline: '離線',
+    LockedOut: '鎖定'
 }[v] || v)
 
-const accText = (v: string) => ({ 
-    Enabled: '啟用中', 
-    Disabled: '停用中', 
-    Unused: '已建立但未啟用' 
+const accText = (v: string) => ({
+    Enabled: '啟用中',
+    Disabled: '停用中',
+    Unused: '已建立但未啟用'
 }[v] || v)
 
 // =====================
@@ -168,7 +168,7 @@ const load = async () => {
 // =====================
 // 分頁功能
 // =====================
-const PAGE_SIZE = 12
+const PAGE_SIZE = 10
 const page = ref(1)
 
 const sourceList = computed(() => computers.value)
@@ -358,6 +358,10 @@ const confirmDelete = async () => {
 }
 
 /* Table */
+tbody {
+    overflow-x: auto;
+}
+
 .table-wrapper {
     border-radius: 12px;
     border: 1px solid rgba(148, 163, 184, 0.5);

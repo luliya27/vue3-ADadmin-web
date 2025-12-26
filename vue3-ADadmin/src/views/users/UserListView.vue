@@ -40,13 +40,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-if="filteredUsers.length === 0">
-                        <td colspan="7" class="empty">
+                    <tr v-if="pagedList.length === 0">
+                        <td colspan="8" class="empty">
                             查無符合條件的使用者
                         </td>
                     </tr>
 
-                    <tr v-for="user in filteredUsers" :key="user.username">
+                    <tr v-for="user in pagedList" :key="user.username">
                         <!-- 帳號 -->
                         <td class="mono link" @dblclick="openEdit(user)" title="雙擊查看詳細資訊">
                             {{ user.username }}
@@ -84,6 +84,23 @@
                     </tr>
                 </tbody>
             </table>
+            <!-- 分頁 -->
+            <div v-if="showPagination" class="pagination">
+                <div class="info">
+                    共 {{ total }} 筆　｜　第 {{ page }} / {{ totalPages }} 頁
+                </div>
+
+                <div class="controls">
+                    <button class="pbtn" :disabled="page === 1" @click="goPrev">上一頁</button>
+
+                    <button v-for="p in pageNumbers" :key="String(p)" class="pbtn" :class="{ active: p === page }"
+                        :disabled="p === '...'" @click="p !== '...' && goPage(p as number)">
+                        {{ p }}
+                    </button>
+
+                    <button class="pbtn" :disabled="page === totalPages" @click="goNext">下一頁</button>
+                </div>
+            </div>
         </section>
 
         <!-- 成功提示 -->
@@ -92,19 +109,18 @@
                 ✓ {{ successMessage }}
             </div>
         </Transition>
-
-        <!-- <CreateUserModal v-if="showCreate" :ous="ous" :groups="groups" @close="showCreate = false"
-            @submit="submitCreate" /> -->
-        <CreateUserModal v-if="showCreate" :ous="ous" :groups="groups" :users="users"
-            @close="showCreate = false" @submit="submitCreate" />
+        <!-- Modals -->
+        <CreateUserModal v-if="showCreate" :ous="ous" :groups="groups" :users="users" @close="showCreate = false"
+            @submit="submitCreate" />
         <EditUserModal v-if="showEdit && editingUser" :user="editingUser" :ous="ous" :groups="groups" :users="users"
             @close="closeEdit" @submit="submitEdit" @delete="requestDelete" @unlock="doUnlock" />
-        <ConfirmDeleteUser  :visible="showDeleteConfirm" :user="editingUser" @cancel="showDeleteConfirm = false" @confirm="confirmDelete" />
+        <ConfirmDeleteUser :visible="showDeleteConfirm" :user="editingUser" @cancel="showDeleteConfirm = false"
+            @confirm="confirmDelete" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
     type UserStatus,
     fetchUsers,
@@ -160,9 +176,87 @@ const loadAll = async () => {
 
 onMounted(loadAll)
 
+// =====================
+// 篩選後的使用者清單
+// =====================
+const filteredUsers = computed(() => {
+    const kw = keyword.value.toLowerCase()
+
+    return users.value.filter((user) => {
+        if (statusFilter.value !== 'all' && user.status !== statusFilter.value) {
+            return false
+        }
+
+        if (!kw) return true
+
+        const target =
+            `${user.username} ${user.display_name} ${user.email} ${user.department ?? ''}`.toLowerCase()
+
+        return target.includes(kw)
+    })
+})
+
+// =====================
+// 分頁功能
+// =====================
+const PAGE_SIZE = 10
+const page = ref(1)
+
+const sourceList = computed(() => filteredUsers.value)
+const total = computed(() => sourceList.value.length)
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
+const showPagination = computed(() => total.value > 0)
+
+// 目前頁面的資料
+const pagedList = computed(() => {
+    const start = (page.value - 1) * PAGE_SIZE
+    return sourceList.value.slice(start, start + PAGE_SIZE)
+})
+
+// UI 用：顯示頁碼（最多 7 顆，含 ...）
+const pageNumbers = computed(() => {
+    const pages: (number | '...')[] = []
+    const maxButtons = 7
+    const tp = totalPages.value
+    const cur = page.value
+
+    if (tp <= maxButtons) {
+        for (let i = 1; i <= tp; i++) pages.push(i)
+        return pages
+    }
+
+    const left = Math.max(1, cur - 1)
+    const right = Math.min(tp, cur + 1)
+
+    pages.push(1)
+    if (left > 2) pages.push('...')
+
+    for (let i = left; i <= right; i++) {
+        if (i !== 1 && i !== tp) pages.push(i)
+    }
+
+    if (right < tp - 1) pages.push('...')
+    pages.push(tp)
+
+    return pages
+})
+
+const goPrev = () => { if (page.value > 1) page.value-- }
+const goNext = () => { if (page.value < totalPages.value) page.value++ }
+const goPage = (p: number) => { page.value = p }
+
+// ✅ 當搜尋/篩選結果改變時，自動回到第一頁
+watch([() => sourceList.value.length], () => {
+    page.value = 1
+})
+
+// ✅ 防呆：當資料變少導致頁碼超過，拉回最後一頁
+watch([totalPages], () => {
+    if (page.value > totalPages.value) page.value = totalPages.value
+})
+
 // 新增/修改/刪除/解鎖 handlers
 // const openCreate = () => { showCreate.value = true }
-
 // 提交新增使用者
 const submitCreate = async (payload: any) => {
     try {
@@ -295,23 +389,6 @@ const loadUsers = async () => {
 onMounted(() => {
     loadUsers()
 })
-
-const filteredUsers = computed(() => {
-    const kw = keyword.value.toLowerCase()
-
-    return users.value.filter((user) => {
-        if (statusFilter.value !== 'all' && user.status !== statusFilter.value) {
-            return false
-        }
-
-        if (!kw) return true
-
-        const target =
-            `${user.username} ${user.display_name} ${user.email} ${user.department ?? ''}`.toLowerCase()
-
-        return target.includes(kw)
-    })
-})
 </script>
 
 <style scoped>
@@ -396,6 +473,10 @@ const filteredUsers = computed(() => {
 }
 
 /* Table */
+tbody{
+    overflow-x: auto;
+}
+
 .table-wrapper {
     border-radius: 12px;
     border: 1px solid rgba(148, 163, 184, 0.5);
@@ -639,5 +720,51 @@ const filteredUsers = computed(() => {
 .fade-leave-to {
     opacity: 0;
     transform: translateX(-50%) translateY(-10px);
+}
+
+/* Pagination */
+.pagination {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.pagination .info {
+    font-size: 12px;
+    color: rgba(226, 232, 240, 0.85);
+}
+
+.pagination .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.pbtn {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(2, 6, 23, 0.45);
+    color: #e5e7eb;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.pbtn.active {
+    border: none;
+    background: #a855f7;
+    color: #f9fafb;
+}
+
+.pbtn:disabled {
+    opacity: .55;
+    cursor: default;
 }
 </style>

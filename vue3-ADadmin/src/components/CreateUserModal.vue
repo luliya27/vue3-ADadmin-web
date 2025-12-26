@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import Multiselect from 'vue-multiselect' // 引入 Multiselect 元件
 import 'vue-multiselect/dist/vue-multiselect.css'
 const props = defineProps<{
@@ -171,7 +171,7 @@ const submit = () => {
     background: rgba(15, 23, 42, .96);
     border: 1px solid rgba(148, 163, 184, .3);
     border-radius: 18px;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 .modal-header {
@@ -323,8 +323,13 @@ label {
 .multiselect-input :deep(.multiselect__content-wrapper) {
     border-color: rgba(148, 163, 184, .55);
     background: rgba(15, 23, 42, .96);
-    max-height: 200px;
 }
+
+.multiselect__content-wrapper {
+    max-height: 500px;
+    z-index: 1000;
+}
+
 
 .multiselect-input :deep(.multiselect__option) {
     color: #ffffff !important;
