@@ -66,10 +66,20 @@ VALUES
  'Lab_Staff,Hospital_Staff_All',
  'active', '2025-11-27 10:00:00', 'LAB001!'),
 
+('lab002', '檢驗師002', 'lab002@example.com',
+ '檢驗科', 'OU=Outpatient,OU=HeadOffice,DC=corp,DC=example,DC=com', 'Laboratory',
+ 'Lab_Staff,Hospital_Staff_All',
+ 'active', '2025-11-28 10:00:00', 'LAB002!'),
+
  ('hr001', '人事001', 'hr001@example.com',
  '人事部', 'OU=HR,OU=HeadOffice,DC=corp,DC=example,DC=com', 'HR',
  'HR_Announcement,Hospital_Staff_All',
  'active', '2025-11-27 10:00:00', 'HR001!'),
+
+('hr002', '人事002', 'hr002@example.com',
+ '人事部', 'OU=HR,OU=HeadOffice,DC=corp,DC=example,DC=com', 'HR',
+ 'HR_Announcement,Hospital_Staff_All',
+ 'locked', '2025-11-28 10:00:00', 'HR002!'),
 
 ('temp001', '臨時人員001', 'temp001@example.com',
  NULL, NULL, NULL,
