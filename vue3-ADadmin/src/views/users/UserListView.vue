@@ -4,7 +4,7 @@
         <section class="toolbar">
             <div class="title-block">
                 <h2>使用者管理</h2>
-                <p class="subtitle">目前以假資料開發，後續會改為串接 ADadmin-api</p>
+                <p class="subtitle">顯示 AD 使用者清單，目前以 SQLite 假資料模擬。</p>
             </div>
             <div class="toolbar-actions">
                 <div class="toolbar-item-left">

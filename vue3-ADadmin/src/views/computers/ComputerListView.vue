@@ -3,7 +3,7 @@
         <section>
             <div class="title-block">
                 <h2>電腦管理</h2>
-                <p class="subtitle">顯示 AD 電腦清單，目前以 SQLite 假資料模擬，後續可改為實際 AD 同步。</p>
+                <p class="subtitle">顯示 AD 電腦清單，目前以 SQLite 假資料模擬。</p>
             </div>
 
             <div class="toolbar-actions">

@@ -4,9 +4,7 @@
         <section class="toolbar">
             <div class="title-block">
                 <h2>群組管理</h2>
-                <p class="subtitle">
-                    顯示 AD 群組清單，目前以 SQLite 假資料開發，後續可改為實際 AD 同步。
-                </p>
+                <p class="subtitle">顯示 AD 群組清單，目前以 SQLite 假資料模擬。</p>
             </div>
 
             <div class="toolbar-actions">
