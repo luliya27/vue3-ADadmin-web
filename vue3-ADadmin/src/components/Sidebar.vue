@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
 /* ----- 型別定義 ----- */
@@ -90,13 +90,36 @@ const props = withDefaults(
         collapsed?: boolean
     }>(),
     {
-        collapsed: false,
+        collapsed: true, // 預設收合
     },
 )
 
 const emit = defineEmits<{
     (e: 'toggle'): void
 }>()
+
+/* ----- LocalStorage 持久化側邊欄狀態 ----- */
+const SIDEBAR_STORAGE_KEY = 'sidebar-collapsed'
+
+// 監聽 collapsed 狀態變化，儲存到 localStorage
+watch(
+    () => props.collapsed,
+    (newValue) => {
+        localStorage.setItem(SIDEBAR_STORAGE_KEY, String(newValue))
+    }
+)
+
+// 初始化時從 localStorage 讀取狀態並通知父組件
+onMounted(() => {
+    const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY)
+    if (stored !== null) {
+        const isCollapsed = stored === 'true'
+        // 如果儲存的狀態與當前 props 不同，發出 toggle 事件讓父組件同步
+        if (isCollapsed !== props.collapsed) {
+            emit('toggle')
+        }
+    }
+})
 
 /* ----- Router ----- */
 const router = useRouter()
@@ -131,13 +154,14 @@ const menus: MenuItem[] = [
                 name: 'ComputerList',
                 label: '電腦管理',
                 icon: '💻',
-            }, {
-                name: 'SettingsAd',
-                label: 'AD系統設定',
-                icon: '⚙️',
-            },
+            }
         ],
     },
+    {
+        name: 'SettingsAd',
+        label: '系統設定',
+        icon: '⚙️',
+    }
 ]
 
 /* ----- 群組展開狀態 ----- */
