@@ -50,6 +50,7 @@ VALUES
  'IT_Admins',
  'active', '2025-12-01 14:02:00', 'ADADMIN123!'),
 
+-- 其他測試使用者
 ('nurse001', '護理師001', 'nurse001@example.com',
  '護理部', 'OU=Nursing,OU=HeadOffice,DC=corp,DC=example,DC=com', 'Nursing',
  'Nursing_Staff,Hospital_Staff_All',
@@ -64,6 +65,11 @@ VALUES
  '檢驗科', 'OU=Outpatient,OU=HeadOffice,DC=corp,DC=example,DC=com', 'Laboratory',
  'Lab_Staff,Hospital_Staff_All',
  'active', '2025-11-27 10:00:00', 'LAB001!'),
+
+ ('hr001', '人事001', 'hr001@example.com',
+ '人事部', 'OU=HR,OU=HeadOffice,DC=corp,DC=example,DC=com', 'HR',
+ 'HR_Announcement,Hospital_Staff_All',
+ 'active', '2025-11-27 10:00:00', 'HR001!'),
 
 ('temp001', '臨時人員001', 'temp001@example.com',
  NULL, NULL, NULL,

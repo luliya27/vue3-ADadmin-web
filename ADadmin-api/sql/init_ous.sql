@@ -40,10 +40,10 @@ PRAGMA foreign_keys = ON;
 INSERT INTO ous (id, ou_dn, ouname, description, parentou, parent_id, parent_dn)
 VALUES
 (1, 'OU=HeadOffice,DC=corp,DC=example,DC=com', 'HeadOffice', '總院總部', 1, NULL, NULL),
-(9, 'OU=test0,DC=corp,DC=example,DC=com', 'test0', 'test0', 1, NULL, NULL),
-(12, 'OU=000,DC=corp,DC=example,DC=com', '000', '000', 0, NULL, NULL),
-(13, 'OU=111,DC=corp,DC=example,DC=com', '111', '111', 0, NULL, NULL),
-(14, 'OU=222,DC=corp,DC=example,DC=com', '222', '222', 0, NULL, NULL);
+(10, 'OU=test0,DC=corp,DC=example,DC=com', 'test0', 'test0', 1, NULL, NULL),
+(13, 'OU=000,DC=corp,DC=example,DC=com', '000', '000', 0, NULL, NULL),
+(14, 'OU=111,DC=corp,DC=example,DC=com', '111', '111', 0, NULL, NULL),
+(15, 'OU=222,DC=corp,DC=example,DC=com', '222', '222', 0, NULL, NULL);
 
 -- ===== Level 1 =====
 INSERT INTO ous (id, ou_dn, ouname, description, parentou, parent_id, parent_dn)
@@ -51,12 +51,12 @@ VALUES
 (2, 'OU=Outpatient,OU=HeadOffice,DC=corp,DC=example,DC=com', 'Outpatient', '門診單位', 1, 1, 'OU=HeadOffice,DC=corp,DC=example,DC=com'),
 (3, 'OU=IT,OU=HeadOffice,DC=corp,DC=example,DC=com',        'IT',        '資訊部',     1, 1, 'OU=HeadOffice,DC=corp,DC=example,DC=com'),
 (4, 'OU=Nursing,OU=HeadOffice,DC=corp,DC=example,DC=com',   'Nursing',   '護理部',     1, 1, 'OU=HeadOffice,DC=corp,DC=example,DC=com'),
-(10, 'OU=test1,OU=test0,DC=corp,DC=example,DC=com', 'test1', 'test1', 1, 9, 'OU=test0,DC=corp,DC=example,DC=com');
+(11, 'OU=test1,OU=test0,DC=corp,DC=example,DC=com', 'test1', 'test1', 1, 10, 'OU=test0,DC=corp,DC=example,DC=com');
 
 -- ===== Level 2 - test =====
 INSERT INTO ous (id, ou_dn, ouname, description, parentou, parent_id, parent_dn)
 VALUES
-(11, 'OU=test2,OU=test1,OU=test0,DC=corp,DC=example,DC=com', 'test2', 'test2', 0, 10, 'OU=test1,OU=test0,DC=corp,DC=example,DC=com');
+(12, 'OU=test2,OU=test1,OU=test0,DC=corp,DC=example,DC=com', 'test2', 'test2', 0, 11, 'OU=test1,OU=test0,DC=corp,DC=example,DC=com');
 
 -- ===== Level 2 - 門診單位 =====
 INSERT INTO ous (id, ou_dn, ouname, description, parentou, parent_id, parent_dn)
@@ -69,3 +69,8 @@ INSERT INTO ous (id, ou_dn, ouname, description, parentou, parent_id, parent_dn)
 VALUES
 (7, 'OU=SysAdmin,OU=IT,OU=HeadOffice,DC=corp,DC=example,DC=com',  'SysAdmin', '系統管理組', 0, 3, 'OU=IT,OU=HeadOffice,DC=corp,DC=example,DC=com'),
 (8, 'OU=Network,OU=IT,OU=HeadOffice,DC=corp,DC=example,DC=com',   'Network', '網路組',     0, 3, 'OU=IT,OU=HeadOffice,DC=corp,DC=example,DC=com');
+
+-- ===== Level 2 - 人事部 =====
+INSERT INTO ous (id, ou_dn, ouname, description, parentou, parent_id, parent_dn)
+VALUES
+(9, 'OU=HR,OU=HeadOffice,DC=corp,DC=example,DC=com',  'HR', '人事部', 0, 1, 'OU=HeadOffice,DC=corp,DC=example,DC=com');

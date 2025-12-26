@@ -33,6 +33,10 @@ VALUES
 
   ('Hospital_Staff_All',
    '全院員工共同權限群組',
+   'security-domainlocal'),
+
+   ('IT_Administrator',
+   '資訊部最高權限群組',
    'security-universal'),
 
   ('Doctors_All',
