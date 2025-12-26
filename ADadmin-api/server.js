@@ -896,26 +896,56 @@ app.get('/api/users/:username', (req, res) => {
 app.post('/api/users', express.json(), (req, res) => {
   const { username, display_name, email, department, ou, groupsname, status = 'active', passwordHash = 'default123' } = req.body
 
-  if (!username || !display_name) {
-    return res.status(400).json({ success: false, message: '缺少帳號或顯示名稱' })
+  if (!username || !display_name || !email) {
+    return res.status(400).json({ success: false, message: '缺少帳號、顯示名稱或 Email' })
   }
 
-  const sql = `
-    INSERT INTO user_lists (username, display_name, email, department, ou, ouname, groupsname, status, passwordHash)
-    VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)
-  `
+  // ✅ 如果有提供 ou（ou_dn），查詢對應的 ouname
+  if (ou) {
+    db.get('SELECT ouname FROM ous WHERE ou_dn = ?', [ou], (err, ouRow) => {
+      if (err) {
+        console.error('查詢 OU 名稱失敗：', err)
+        return res.status(500).json({ success: false, message: '查詢 OU 名稱失敗' })
+      }
 
-  db.run(sql, [username, display_name, email || null, department || null, ou || null, groupsname || null, status, passwordHash], function (err) {
-    if (err) {
-      console.error('新增使用者失敗：', err)
-      return res.status(400).json({ success: false, message: '新增失敗（可能帳號已存在）' })
-    }
+      const ouname = ouRow?.ouname || null
 
-    return res.json({
-      success: true,
-      data: { id: this.lastID, username, display_name, email, department, ou, ouname: null, groupsname, status }
+      const sql = `
+        INSERT INTO user_lists (username, display_name, email, department, ou, ouname, groupsname, status, passwordHash)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `
+
+      db.run(sql, [username, display_name, email, department || null, ou, ouname, groupsname || null, status, passwordHash], function (err) {
+        if (err) {
+          console.error('新增使用者失敗：', err)
+          return res.status(400).json({ success: false, message: '新增失敗（可能帳號已存在）' })
+        }
+
+        return res.json({
+          success: true,
+          data: { id: this.lastID, username, display_name, email, department, ou, ouname, groupsname, status }
+        })
+      })
     })
-  })
+  } else {
+    // ✅ 沒有提供 ou，直接新增
+    const sql = `
+      INSERT INTO user_lists (username, display_name, email, department, ou, ouname, groupsname, status, passwordHash)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+
+    db.run(sql, [username, display_name, email, department || null, null, null, groupsname || null, status, passwordHash], function (err) {
+      if (err) {
+        console.error('新增使用者失敗：', err)
+        return res.status(400).json({ success: false, message: '新增失敗（可能帳號已存在）' })
+      }
+
+      return res.json({
+        success: true,
+        data: { id: this.lastID, username, display_name, email, department, ou: null, ouname: null, groupsname, status }
+      })
+    })
+  }
 })
 
 // ✅ 更新使用者資訊
@@ -923,35 +953,114 @@ app.patch('/api/users/:id', express.json(), (req, res) => {
   const id = Number(req.params.id)
   const { username, display_name, email, department, ou, groupsname, status } = req.body
 
-  const fields = []
-  const params = []
+  // ✅ 如果更新了 ou，需要同步查詢並更新 ouname
+  if (ou !== undefined) {
+    // ou 可能是 null（清空）或具體的 ou_dn
+    if (ou === null) {
+      // 清空 OU
+      const fields = []
+      const params = []
 
-  const setIf = (k, v) => {
-    if (v !== undefined) { fields.push(`${k} = ?`); params.push(v) }
-  }
+      const setIf = (k, v) => {
+        if (v !== undefined) { fields.push(`${k} = ?`); params.push(v) }
+      }
 
-  setIf('username', username)
-  setIf('display_name', display_name)
-  setIf('email', email)
-  setIf('department', department)
-  setIf('ou', ou)
-  setIf('groupsname', groupsname)
-  setIf('status', status)
+      setIf('username', username)
+      setIf('display_name', display_name)
+      setIf('email', email)
+      setIf('department', department)
+      setIf('ou', null)
+      setIf('ouname', null)
+      setIf('groupsname', groupsname)
+      setIf('status', status)
 
-  if (!fields.length) return res.json({ success: true })
+      if (!fields.length) return res.json({ success: true })
 
-  params.push(id)
+      params.push(id)
 
-  const sql = `UPDATE user_lists SET ${fields.join(', ')} WHERE id = ?`
+      const sql = `UPDATE user_lists SET ${fields.join(', ')} WHERE id = ?`
 
-  db.run(sql, params, function (err) {
-    if (err) {
-      console.error('更新使用者失敗：', err)
-      return res.status(400).json({ success: false, message: '更新失敗（可能帳號已存在）' })
+      db.run(sql, params, function (err) {
+        if (err) {
+          console.error('更新使用者失敗：', err)
+          return res.status(400).json({ success: false, message: '更新失敗（可能帳號已存在）' })
+        }
+
+        return res.json({ success: true })
+      })
+    } else {
+      // 查詢 ouname
+      db.get('SELECT ouname FROM ous WHERE ou_dn = ?', [ou], (err, ouRow) => {
+        if (err) {
+          console.error('查詢 OU 名稱失敗：', err)
+          return res.status(500).json({ success: false, message: '查詢 OU 名稱失敗' })
+        }
+
+        const ouname = ouRow?.ouname || null
+
+        const fields = []
+        const params = []
+
+        const setIf = (k, v) => {
+          if (v !== undefined) { fields.push(`${k} = ?`); params.push(v) }
+        }
+
+        setIf('username', username)
+        setIf('display_name', display_name)
+        setIf('email', email)
+        setIf('department', department)
+        setIf('ou', ou)
+        setIf('ouname', ouname)
+        setIf('groupsname', groupsname)
+        setIf('status', status)
+
+        if (!fields.length) return res.json({ success: true })
+
+        params.push(id)
+
+        const sql = `UPDATE user_lists SET ${fields.join(', ')} WHERE id = ?`
+
+        db.run(sql, params, function (err) {
+          if (err) {
+            console.error('更新使用者失敗：', err)
+            return res.status(400).json({ success: false, message: '更新失敗（可能帳號已存在）' })
+          }
+
+          return res.json({ success: true })
+        })
+      })
+    }
+  } else {
+    // 沒有更新 ou，正常更新其他欄位
+    const fields = []
+    const params = []
+
+    const setIf = (k, v) => {
+      if (v !== undefined) { fields.push(`${k} = ?`); params.push(v) }
     }
 
-    return res.json({ success: true })
-  })
+    setIf('username', username)
+    setIf('display_name', display_name)
+    setIf('email', email)
+    setIf('department', department)
+    setIf('groupsname', groupsname)
+    setIf('status', status)
+
+    if (!fields.length) return res.json({ success: true })
+
+    params.push(id)
+
+    const sql = `UPDATE user_lists SET ${fields.join(', ')} WHERE id = ?`
+
+    db.run(sql, params, function (err) {
+      if (err) {
+        console.error('更新使用者失敗：', err)
+        return res.status(400).json({ success: false, message: '更新失敗（可能帳號已存在）' })
+      }
+
+      return res.json({ success: true })
+    })
+  }
 })
 
 // ✅ 解鎖使用者（專門的解鎖端點，要放在通用 PATCH 前面）
@@ -1236,51 +1345,98 @@ app.get('/api/adsettings', (req, res) => {
 app.put('/api/adsettings', express.json(), (req, res) => {
   const s = req.body
 
-  const sql = `
-    UPDATE adsettings SET
-      companyname = ?,
-      teamname = ?,
-      syslogo = ?,
-      sysbackgroundimg = ?,
-      sysaccount = ?,
-      syspasswd = ?,
-      domainname = ?,
-      dc_dn = ?,
-      ip = ?,
-      subnetmask = ?,
-      defaultgateway = ?,
-      preferredDNSserver = ?,
-      secondaryDNSserver = ?
-    WHERE id = ?
-  `
-
-  const params = [
-    s.companyname,
-    s.teamname,
-    s.syslogo,
-    s.sysbackgroundimg,
-    s.sysaccount,
-    s.syspasswd,
-    s.domainname,
-    s.dc_dn,
-    s.ip,
-    s.subnetmask,
-    s.defaultgateway,
-    s.preferredDNSserver,
-    s.secondaryDNSserver,
-    s.id ?? 1
-  ]
-
-  db.run(sql, params, function (err) {
+  // ✅ 先取得舊的 dc_dn，用於更新 ous 資料表
+  db.get('SELECT dc_dn FROM adsettings WHERE id = ?', [s.id ?? 1], (err, oldSettings) => {
     if (err) {
-      console.error('更新 adsettings 錯誤：', err)
+      console.error('查詢舊設定錯誤：', err)
       return res.status(500).json({
         success: false,
-        message: '更新系統設定失敗'
+        message: '查詢舊設定失敗'
       })
     }
 
-    return res.json({ success: true })
+    const oldDcDn = oldSettings?.dc_dn || ''
+    const newDcDn = s.dc_dn || ''
+
+    const sql = `
+      UPDATE adsettings SET
+        companyname = ?,
+        teamname = ?,
+        syslogo = ?,
+        sysbackgroundimg = ?,
+        sysaccount = ?,
+        syspasswd = ?,
+        domainname = ?,
+        dc_dn = ?,
+        ip = ?,
+        subnetmask = ?,
+        defaultgateway = ?,
+        preferredDNSserver = ?,
+        secondaryDNSserver = ?
+      WHERE id = ?
+    `
+
+    const params = [
+      s.companyname,
+      s.teamname,
+      s.syslogo,
+      s.sysbackgroundimg,
+      s.sysaccount,
+      s.syspasswd,
+      s.domainname,
+      s.dc_dn,
+      s.ip,
+      s.subnetmask,
+      s.defaultgateway,
+      s.preferredDNSserver,
+      s.secondaryDNSserver,
+      s.id ?? 1
+    ]
+
+    db.run(sql, params, function (err) {
+      if (err) {
+        console.error('更新 adsettings 錯誤：', err)
+        return res.status(500).json({
+          success: false,
+          message: '更新系統設定失敗'
+        })
+      }
+
+      // ✅ 如果 dc_dn 有變更，同步更新 ous 資料表
+      if (oldDcDn && newDcDn && oldDcDn !== newDcDn) {
+        console.log(`🔄 DC 變更：${oldDcDn} → ${newDcDn}，正在更新 ous 資料表...`)
+
+        // 更新所有 OU 的 ou_dn
+        db.run(
+          `UPDATE ous SET ou_dn = REPLACE(ou_dn, ?, ?) WHERE ou_dn LIKE ?`,
+          [oldDcDn, newDcDn, `%${oldDcDn}`],
+          function (ouDnErr) {
+            if (ouDnErr) {
+              console.error('更新 ou_dn 錯誤：', ouDnErr)
+            } else {
+              console.log(`✅ 已更新 ${this.changes} 筆 ou_dn`)
+            }
+
+            // 更新所有 OU 的 parent_dn
+            db.run(
+              `UPDATE ous SET parent_dn = REPLACE(parent_dn, ?, ?) WHERE parent_dn LIKE ?`,
+              [oldDcDn, newDcDn, `%${oldDcDn}`],
+              function (parentDnErr) {
+                if (parentDnErr) {
+                  console.error('更新 parent_dn 錯誤：', parentDnErr)
+                } else {
+                  console.log(`✅ 已更新 ${this.changes} 筆 parent_dn`)
+                }
+
+                return res.json({ success: true })
+              }
+            )
+          }
+        )
+      } else {
+        return res.json({ success: true })
+      }
+    })
   })
 })
 
