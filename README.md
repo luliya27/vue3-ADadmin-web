@@ -41,9 +41,8 @@ vue3-ADadmin-web/
 │   ├── tsconfig.app.json          # TypeScript 應用程式設定（src 目錄型別檢查）
 │   ├── tsconfig.json              # TypeScript 主設定檔（多專案引用）
 │   ├── tsconfig.node.json         # TypeScript Node 環境設定（Vite 設定檔用）
-│   ├── vite.config.ts             # Vite 建置工具設定（代理、別名、插件）
-│   └── README.md                  # 專案說明文件
-└── ...
+│   └── vite.config.ts             # Vite 建置工具設定（代理、別名、插件）
+└── README.md                    # 專案說明文件
 ```
 
 ## 核心功能說明
