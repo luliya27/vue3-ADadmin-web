@@ -66,8 +66,8 @@
 
         <!-- 開闔按鈕 -->
         <button class="collapse-btn" @click="emit('toggle')">
-            <span v-if="props.collapsed">&gt;</span>
-            <span v-else>&lt;</span>
+            <span v-if="props.collapsed"><font-awesome-icon icon="fa-solid fa-angle-right" /></span>
+            <span v-else><font-awesome-icon icon="fa-solid fa-angle-left" /></span>
         </button>
     </aside>
 </template>

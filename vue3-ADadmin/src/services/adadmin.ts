@@ -91,11 +91,11 @@ export type UserStatus = 'active' | 'locked' | 'disabled'
 
 // 使用者資料介面
 export interface User {
-  id: number              // 👈 新增：id（用於刪除、修改）
-  username: string
-  display_name: string
-  email: string
-  department?: string
+  id: number                    // 👈 新增：id（用於刪除、修改）
+  username: string              // 使用者帳號
+  display_name: string          // 顯示名稱
+  email: string                 // 電子郵件
+  department?: string           // 部門
   // ou?: string | null         // user_lists 裡原本存的 DN
   ou_dn?: string | null         // 從 ous join 出來（其實會跟 ou 一樣）
   ouname?: string | null        // 👈 新增：OU 顯示名稱
@@ -143,7 +143,6 @@ export async function updateUserStatus(
   return res.data.data
 }
 
-/* ---------- 群組管理 ---------- */
 /* ---------- 群組管理 ---------- */
 // 群組資料結構: security-global, security-domainlocal, security-universal, distribution
 export type GroupType =
