@@ -46,16 +46,6 @@
             </div>
         </section>
 
-        <!-- 組織單位人數圖表 -->
-        <section class="chart-section">
-            <h2>組織單位人數</h2>
-            <div class="chart-container">
-                <Bar v-if="!loading && chartData.labels.length > 0" :data="chartData" :options="chartOptions" />
-                <div v-else-if="loading" class="center-text">載入中...</div>
-                <div v-else class="center-text">暫無資料</div>
-            </div>
-        </section>
-
         <section class="todo">
             <h2>開發 TODO</h2>
             <ul>
@@ -71,19 +61,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { fetchUsers, fetchComputers } from '@/services/adadmin'
-import { Bar } from 'vue-chartjs' // 引入 Bar 圖表元件
-import {
-    Chart as ChartJS,
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    CategoryScale,
-    LinearScale
-} from 'chart.js'
-
-// 註冊 Chart.js 組件
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
 // 統計數據
 const stats = ref({
@@ -95,60 +72,6 @@ const stats = ref({
 
 const loading = ref(true)
 
-// 圖表資料
-const chartData = ref<{
-    labels: string[]
-    datasets: {
-        label: string // 標籤名稱
-        backgroundColor: string // 顏色
-        data: number[] // 數據
-    }[]
-}>({
-    labels: [],
-    datasets: [{
-        label: '標籤名稱',
-        backgroundColor: '#顏色',
-        data: []
-    }]
-})
-
-// 圖表選項
-const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            display: true,
-            labels: {
-                color: '#e5e7eb'
-            }
-        },
-        title: {
-            display: false
-        }
-    },
-    scales: {
-        x: {
-            ticks: {
-                color: '#e5e7eb'
-            },
-            grid: {
-                color: 'rgba(148, 163, 184, 0.2)'
-            }
-        },
-        y: {
-            beginAtZero: true,
-            ticks: {
-                color: '#e5e7eb',
-                stepSize: 1
-            },
-            grid: {
-                color: 'rgba(148, 163, 184, 0.2)'
-            }
-        }
-    }
-}
-
 // 載入統計資料
 const loadStats = async () => {
     loading.value = true
@@ -159,9 +82,9 @@ const loadStats = async () => {
         stats.value.lockedUsers = users.filter(u => u.status === 'locked').length
 
         // 計算今日登入數量
-        const today = new Date().toISOString().split('T')[0] ?? '' // YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0]
         stats.value.todayLogins = users.filter(u =>
-            u.last_login_at?.startsWith(today) ?? false // 是否為今日登入
+            u.last_login_at && u.last_login_at.startsWith(today)
         ).length
 
         // 獲取電腦資料
@@ -169,26 +92,6 @@ const loadStats = async () => {
         stats.value.onlineComputers = computers.filter(
             c => c.ConnectivityStatus === 'Online'
         ).length
-
-        // 統計各組織單位人數
-        const ouStats = new Map<string, number>()
-        users.forEach(user => {
-            const ouname = user.ouname || '未指定'
-            ouStats.set(ouname, (ouStats.get(ouname) || 0) + 1)
-        })
-
-        // 轉換為圖表資料（按人數排序）
-        const sortedOus = Array.from(ouStats.entries())
-            .sort((a, b) => b[1] - a[1])
-        
-        chartData.value = {
-            labels: sortedOus.map(([ouname]) => ouname),
-            datasets: [{
-                label: '使用者人數',
-                backgroundColor: '#26c6da',
-                data: sortedOus.map(([, count]) => count)
-            }]
-        }
     } catch (error) {
         console.error('載入統計資料失敗：', error)
     } finally {
@@ -282,33 +185,5 @@ onMounted(loadStats)
 
 .purple {
     background: #a855f7;
-}
-
-/* 圖表區塊 */
-.chart-section {
-    padding: 5px 15px 15px 15px;
-    border-radius: 12px;
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(148, 163, 184, 0.4);
-}
-
-.chart-section h2 {
-    font-size: 18px;
-    margin-bottom: 10px;
-    color: #e5e7eb;
-}
-
-.chart-container {
-    height: 350px;
-    position: relative;
-}
-
-.center-text {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #9ca3af;
-    font-size: 14px;
 }
 </style>
