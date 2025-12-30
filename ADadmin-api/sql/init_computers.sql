@@ -33,4 +33,5 @@ VALUES
 ('NURSE-WS-01', 'Windows 10 Enterprise', 'Nursing', 4, 'Joined', 'Online', 'Enabled'),
 ('OPD-KIOSK-01', 'Windows 10 IoT', 'Outpatient', 2, 'Joined', 'Online', 'Unused'),
 ('LAB-PC-01', 'Windows 11 Pro', 'Laboratory', 5, 'Joined', 'LockedOut', 'Disabled'),
-('TEMP-WS-01', 'Windows 10 Pro', NULL, NULL, 'NotJoined', 'Offline', 'Unused');
+('TEMP-WS-01', 'Windows 10 Pro', NULL, NULL, 'NotJoined', 'Offline', 'Unused'),
+('User-PC-01', 'Windows 11 Pro', NULL, NULL, 'NotJoined', 'Offline', 'Unused');
