@@ -24,7 +24,7 @@ const upload = multer({ storage: memoryStorage });
 app.use('/uploads', express.static('uploads'));
 
 // ---- SQLite 連線設定 ----
-const dbPath = path.join(__dirname, 'adadmin.db')
+const dbPath = path.join(__dirname, 'db', 'adadmin.db')
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('❌ 無法連線到 SQLite 資料庫：', err.message)
@@ -36,7 +36,101 @@ const db = new sqlite3.Database(dbPath, (err) => {
 // ✅ 增加 SQLite 超時時間以避免 SQLITE_BUSY 錯誤
 db.configure('busyTimeout', 10000);
 
-// ✅ 自動遷移：確保 passwordHash 欄位有預設值
+// ✅ 初始化數據庫表
+function initializeDatabase() {
+  const initSqlDir = path.join(__dirname, 'sql');
+  const sqlFiles = [
+    'init_adsettings.sql',
+    'init_user_lists.sql',
+    'init_groups.sql',
+    'init_ous.sql',
+    'init_computers.sql'
+  ];
+
+  console.log('[init] 開始初始化數據庫...');
+  
+  db.serialize(() => {
+    // 檢查 adsettings 表是否存在
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='adsettings'", (err, row) => {
+      if (!row) {
+        console.log('[init] adsettings 表不存在，開始初始化...');
+        const initAdSettingsSql = require('fs').readFileSync(path.join(initSqlDir, 'init_adsettings.sql'), 'utf8');
+        db.exec(initAdSettingsSql, (execErr) => {
+          if (execErr) {
+            console.error('[init] adsettings 初始化失敗:', execErr);
+          } else {
+            console.log('[init] ✅ adsettings 表初始化成功');
+          }
+        });
+      }
+    });
+
+    // 檢查 user_lists 表是否存在
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='user_lists'", (err, row) => {
+      if (!row) {
+        console.log('[init] user_lists 表不存在，開始初始化...');
+        const initUserListsSql = require('fs').readFileSync(path.join(initSqlDir, 'init_user_lists.sql'), 'utf8');
+        db.exec(initUserListsSql, (execErr) => {
+          if (execErr) {
+            console.error('[init] user_lists 初始化失敗:', execErr);
+          } else {
+            console.log('[init] ✅ user_lists 表初始化成功');
+          }
+        });
+      }
+    });
+
+    // 檢查 groups 表是否存在
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='groups'", (err, row) => {
+      if (!row) {
+        console.log('[init] groups 表不存在，開始初始化...');
+        const initGroupsSql = require('fs').readFileSync(path.join(initSqlDir, 'init_groups.sql'), 'utf8');
+        db.exec(initGroupsSql, (execErr) => {
+          if (execErr) {
+            console.error('[init] groups 初始化失敗:', execErr);
+          } else {
+            console.log('[init] ✅ groups 表初始化成功');
+          }
+        });
+      }
+    });
+
+    // 檢查 ous 表是否存在
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='ous'", (err, row) => {
+      if (!row) {
+        console.log('[init] ous 表不存在，開始初始化...');
+        const initOusSql = require('fs').readFileSync(path.join(initSqlDir, 'init_ous.sql'), 'utf8');
+        db.exec(initOusSql, (execErr) => {
+          if (execErr) {
+            console.error('[init] ous 初始化失敗:', execErr);
+          } else {
+            console.log('[init] ✅ ous 表初始化成功');
+          }
+        });
+      }
+    });
+
+    // 檢查 computers 表是否存在
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='computers'", (err, row) => {
+      if (!row) {
+        console.log('[init] computers 表不存在，開始初始化...');
+        const initComputersSql = require('fs').readFileSync(path.join(initSqlDir, 'init_computers.sql'), 'utf8');
+        db.exec(initComputersSql, (execErr) => {
+          if (execErr) {
+            console.error('[init] computers 初始化失敗:', execErr);
+          } else {
+            console.log('[init] ✅ computers 表初始化成功');
+          }
+        });
+      }
+    });
+  });
+}
+
+// 初始化數據庫
+initializeDatabase();
+
+// ✅ 自動�遷移：確保 passwordHash 欄位有預設值
 db.serialize(() => {
   db.all("PRAGMA table_info(user_lists)", [], (err, columns) => {
     if (err) {

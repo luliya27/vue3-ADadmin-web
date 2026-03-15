@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: Docker發佈/Dockerfile.backend
+    image: adadmin-docker-api:latest
+    container_name: adadmin-api
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: always
+    volumes:
+      # 掛載資料庫目錄以實現資料持久化
+      - ../ADadmin-api:/app/db
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: Docker發佈/Dockerfile.frontend
+    image: adadmin-docker-frontend:latest
+    container_name: adadmin-frontend
+    ports:
+      - "8000:80"
+    depends_on:
+      - api
+    restart: always
