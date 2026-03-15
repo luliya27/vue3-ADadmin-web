@@ -1,0 +1,79 @@
+# 環境變數
+.env
+.env.local
+.env.*.local
+
+# 依賴
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 構建輸出
+dist/
+build/
+.nuxt/
+.cache/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.env.test
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+.eslintcache
+.stylelintcache
+
+# 測試
+coverage/
+.nyc_output/
+junit.xml
+
+# 日誌
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 運行時
+tmp/
+temp/
+*.tmp
+
+# OS 檔案
+Thumbs.db
+.DS_Store
+
+# 資料庫
+*.db
+*.db-shm
+*.db-wal
+
+# Docker 打包檔案 (太大，推薦使用 GitHub Releases 或其他存儲)
+Docker發佈/image/
+Docker部署/logs/
+
+# SQLite 資料庫文件
+ADadmin-api/db/
+
+# 本地開發工具
+.vite
+.nuxt
+
+# CI/CD
+.github/workflows/secrets
+
+# IDE 特定檔案
+.vscode/settings.json
+.vscode/extensions.json
